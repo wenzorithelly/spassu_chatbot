@@ -1,0 +1,51 @@
+services:
+  spassu_chatbot:
+    container_name: spassu_chatbot
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        - ENVIRONMENT=${ENVIRONMENT:-local}
+    volumes:
+      - ./:/app
+    ports:
+      - "8081:8081"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}  
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}  
+      - POSTGRES_DB=${POSTGRES_DB:-spassu}
+      - ENVIRONMENT=${ENVIRONMENT:-local}
+      - EXTRA_UVICORN_ARGS=--reload
+    depends_on:
+      - postgres
+    networks:
+      - spassu_network
+
+
+  postgres:
+    image: ankane/pgvector:v0.5.1
+    container_name: spassu_postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=spassu
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_data_v1:/var/lib/postgresql/data
+    networks:
+      - spassu_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+
+volumes:
+  postgres_data_v1:
+networks:
+  spassu_network:
+    driver: bridge

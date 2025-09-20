@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "spassu_chatbot"
+version = "0.1.0"
+description = ""
+authors = ["Wenzo Rithelly <rithellyenzo@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.7"
+uvicorn = "^0.34.0"
+sqlalchemy = "^2.0.37"
+pydantic = "^2.10.6"
+pydantic-settings = "^2.7.1"
+psycopg2-binary = "^2.9.10"
+python-dotenv = "^1.0.1"
+redis = "^5.2.1"
+alembic = "^1.14.1"
+microsoft-agents-m365copilot-beta = "^1.0.0rc5"
+azure-identity = "^1.25.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
