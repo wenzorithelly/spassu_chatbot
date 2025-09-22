@@ -1,0 +1,6 @@
+select top 5 
+COD_NOM_LOJA,
+    SUM(VLR_RECEITA_LIQUIDA) AS VENDAS
+from [4_TMP].REL_CHATBOT
+group by COD_NOM_LOJA
+order by VENDAS;
