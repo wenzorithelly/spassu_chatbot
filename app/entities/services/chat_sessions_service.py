@@ -9,8 +9,8 @@ from app.entities.schema.chat_sessions_schema import (
 
 class ChatSessionsService:
     def __init__(self, db: Session):
-        super().__init__(db)
-        self.repository = ChatSessionsRepository(db)
+        self.db = db
+        self.repository = ChatSessionsRepository()
 
     def get_by_user_email(self, user_email: str) -> ChatSessionSchema:
         return self.repository.get_by_user_email(self.db, user_email)

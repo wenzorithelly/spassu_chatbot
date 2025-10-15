@@ -10,8 +10,8 @@ from app.entities.schema.chat_messages_schema import (
 
 class ChatMessagesService:
     def __init__(self, db: Session):
-        super().__init__(db)
-        self.repository = ChatMessageRepository(db)
+        self.db = db
+        self.repository = ChatMessageRepository()
 
     def get_by_session_id(self, session_id: int) -> List[ChatMessageSchema]:
         return self.repository.get_by_session_id(self.db, session_id)

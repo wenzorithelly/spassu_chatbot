@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.clients.db.postgres_client import get_db
-from app.entities.schema.chat_messages_schema import ChatMessageSchema
+from app.entities.schema.answer_schema import AnswerSchema
 from app.entities.services.conversations_service import ConversationsService
 from app.monitoring.logging import get_logger
 
@@ -14,11 +14,11 @@ def get_conversations_service(db: Session = Depends(get_db)) -> ConversationsSer
     return ConversationsService(db)
 
 
-@chatbot_router.get("/answer", response_model=ChatMessageSchema)
-def answer(
-    message: str,
-    user_email: str,
+@chatbot_router.post("/answer")
+async def answer(
+    payload: AnswerSchema,
     conversations_service: ConversationsService = Depends(get_conversations_service),
 ):
-    logger.info(f"Received message: {message} for user: {user_email}")
-    return conversations_service.answer(message, user_email)
+    logger.info(f"Received message: {payload.message} for user: {payload.user_email}")
+    response = await conversations_service.answer(payload.message, payload.user_email)
+    return {"response": response}

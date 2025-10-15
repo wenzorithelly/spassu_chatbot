@@ -1,25 +1,27 @@
 from typing import List, Dict, Any
-from app.clients.llm.copilot import CopilotClient
+from sqlalchemy.orm import Session
+from app.clients.llm.azure_openai import AzureOpenAIClient
 from app.entities.schema.agent_response_schema import ChatResponse
+from app.agents.prompts import RESPONSE_GENERATOR_PROMPT
 import json
 
 
-class ResponseGeneratorAgent(CopilotClient):
-    def __init__(self, tenant_id: str, client_id: str):
-        super().__init__(tenant_id, client_id)
+class ResponseGeneratorAgent:
+    def __init__(self, db: Session):
+        self.db = db
+        self.llm_client = AzureOpenAIClient()
 
     async def generate_response(
         self,
         user_message: str,
         sql_results: str,
-        system_prompt: str,
         message_history: List[Dict[str, Any]] = None,
     ) -> ChatResponse:
         """Generate natural language response from SQL results with message history"""
         messages = [
             {
                 "role": "system",
-                "content": f"{system_prompt}\n\nRespond in JSON format: {json.dumps(ChatResponse.model_json_schema())}",
+                "content": f"{RESPONSE_GENERATOR_PROMPT}\n\nRespond in JSON format: {json.dumps(ChatResponse.model_json_schema())}",
             }
         ]
 
@@ -34,9 +36,13 @@ class ResponseGeneratorAgent(CopilotClient):
             }
         )
 
-        response = await self._call_api(messages)
-        return ChatResponse.model_validate_json(response)
+        response = await self.llm_client.get_response_async(messages)
+        # Clean response - remove markdown code blocks if present
+        cleaned_response = response.strip()
+        if cleaned_response.startswith("```json"):
+            cleaned_response = cleaned_response[7:]  # Remove ```json
+        if cleaned_response.endswith("```"):
+            cleaned_response = cleaned_response[:-3]  # Remove ```
+        cleaned_response = cleaned_response.strip()
 
-    async def _call_api(self, messages):
-        """Call the base client API"""
-        return await super().get_response(messages)
+        return ChatResponse.model_validate_json(cleaned_response)

@@ -4,7 +4,6 @@ from app.entities.schema.chat_sessions_schema import (
     ChatSessionCreateSchema,
     ChatSessionUpdateSchema,
 )
-from app.entities.services.prompts_service import PromptsService
 from sqlalchemy.orm import Session
 from app.entities.services.chat_sessions_service import ChatSessionsService
 from app.entities.services.chat_messages_service import ChatMessagesService
@@ -14,7 +13,7 @@ from app.entities.schema.chat_messages_schema import (
 )
 from app.agents.sql_generator import SQLGeneratorAgent
 from app.agents.response_generator import ResponseGeneratorAgent
-from app.entities.models.prompts import PromptType
+from app.clients.db.azure_sql_client import AzureSQLClient
 from app.monitoring.logging import get_logger
 
 logger = get_logger(__name__)
@@ -27,7 +26,7 @@ class ConversationsService:
         self.chat_messages_service = ChatMessagesService(db)
         self.sql_generator_agent = SQLGeneratorAgent(db)
         self.response_generator_agent = ResponseGeneratorAgent(db)
-        self.prompts_service = PromptsService(db)
+        self.azure_sql_client = AzureSQLClient()
 
     def get_conversation_by_user_email(self, user_email: str) -> ChatSessionSchema:
         return self.chat_sessions_service.get_by_user_email(user_email)
@@ -47,34 +46,53 @@ class ConversationsService:
     ) -> ChatMessageSchema:
         return self.chat_messages_service.create(message_schema)
 
-    def generate_sql_query(self, message: str) -> ChatMessageSchema:
-        prompt = self.prompts_service.get_latest_prompt_by_type(
-            PromptType.SQL_GENERATOR
-        )
-        sql_query = self.sql_generator_agent.generate_sql_query(message, prompt.prompt)
-        return sql_query
+    async def generate_sql_query(self, message: str) -> str:
+        sql_response = await self.sql_generator_agent.generate_sql_query(message)
+        return sql_response.query
 
-    def generate_response(
-        self, message: str, sql_query: str, message_history: List[ChatMessageSchema]
-    ) -> ChatMessageSchema:
-        prompt = self.prompts_service.get_latest_prompt_by_type(
-            PromptType.RESPONSE_GENERATOR
-        )
-        response = self.response_generator_agent.generate_response(
+    async def generate_response(
+        self, message: str, sql_results: str, message_history: List[ChatMessageSchema]
+    ) -> str:
+        response = await self.response_generator_agent.generate_response(
             user_message=message,
-            sql_results=sql_query,
-            system_prompt=prompt.prompt,
+            sql_results=sql_results,
             message_history=message_history,
         )
-        return response
+        return response.response
 
-    def answer(self, message: str, user_email: str) -> ChatMessageSchema:
-        sql_query = self.generate_sql_query(message)
-        logger.info(f"SQL Query: {sql_query}")
+    async def answer(self, message: str, user_email: str) -> str:
+        # Generate SQL query
+        sql_query = await self.generate_sql_query(message)
+        logger.info(f"Generated SQL Query: {sql_query}")
+
+        # Execute SQL query against Azure SQL Database
+        query_result = self.azure_sql_client.execute_query_safe(sql_query)
+        logger.info(f"Query execution result: {query_result}")
+
+        # Format query results for the AI
+        if query_result["success"]:
+            formatted_results = {
+                "success": True,
+                "row_count": query_result["row_count"],
+                "data": query_result["data"][:10],  # Limit to first 10 rows for AI processing
+                "columns": query_result.get("columns", [])
+            }
+        else:
+            formatted_results = {
+                "success": False,
+                "error": query_result["error"],
+                "data": []
+            }
+
+        # Get conversation context
         conversation = self.get_conversation_by_user_email(user_email=user_email)
-        logger.info(f"Conversation: {conversation.model_dump(mode='json')}")
-        response = self.generate_response(
-            message=message, sql_query=sql_query, message_history=conversation.messages
+        logger.info(f"Conversation: {conversation}")
+
+        # Generate natural language response
+        response = await self.generate_response(
+            message=message,
+            sql_results=str(formatted_results),
+            message_history=conversation.messages if conversation else [],
         )
-        logger.info(f"Response: {response.model_dump(mode='json')}")
+        logger.info(f"Final Response: {response}")
         return response

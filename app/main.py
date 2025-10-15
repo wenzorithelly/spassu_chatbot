@@ -8,9 +8,10 @@ from app.clients.db.postgres_client import Base, engine
 from app.monitoring.logging import get_logger
 from fastapi.responses import JSONResponse
 from app.entities.api.v1.routes.chatbot_routes import chatbot_router
+from app.entities.api.v1.routes.bot_routes import bot_router
 
 
-logger = get_logger("main")
+logger = get_logger(__name__)
 
 Base.metadata.create_all(bind=engine)
 
@@ -27,6 +28,9 @@ app.add_middleware(
 app.include_router(
     chatbot_router, prefix=f"{settings.API_V1_STR}/chatbot", tags=["chatbot"]
 )
+
+# Bot Framework endpoint for Teams
+app.include_router(bot_router, prefix="/api", tags=["bot"])
 
 
 @app.get("/health")

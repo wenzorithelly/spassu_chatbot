@@ -9,15 +9,27 @@ services:
     volumes:
       - ./:/app
     ports:
-      - "8081:8081"
+      - "8088:8088"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
-      - POSTGRES_HOST=${POSTGRES_HOST:-postgres}  
-      - POSTGRES_PORT=${POSTGRES_PORT:-5432}  
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB:-spassu}
       - ENVIRONMENT=${ENVIRONMENT:-local}
       - EXTRA_UVICORN_ARGS=--reload
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT}
+      - AZURE_RESOURCE_SECRET_ID=${AZURE_RESOURCE_SECRET_ID}
+      - AZURE_RESOURCE_SECRET_KEY=${AZURE_RESOURCE_SECRET_KEY}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID}
+      - AZURE_DB_HOST=${AZURE_DB_HOST}
+      - AZURE_DATABASE=${AZURE_DATABASE}
+      - AZURE_DB_USER=${AZURE_DB_USER}
+      - AZURE_DB_PASSWORD=${AZURE_DB_PASSWORD}
     depends_on:
       - postgres
     networks:
@@ -32,7 +44,7 @@ services:
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=spassu
     ports:
-      - "5436:5432"
+      - "5450:5432"
     volumes:
       - postgres_data_v1:/var/lib/postgresql/data
     networks:

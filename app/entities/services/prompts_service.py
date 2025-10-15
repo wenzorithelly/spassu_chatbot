@@ -6,13 +6,13 @@ from sqlalchemy.orm import Session
 class PromptsService:
     def __init__(self, db: Session):
         self.db = db
-        self.prompts_repo = PromptsRepo(db)
+        self.prompts_repo = PromptsRepo()
 
     def get_prompt_by_type(self, type: PromptType) -> PromptModel:
-        return self.prompts_repo.get_prompt_by_type(type)
+        return self.prompts_repo.get_prompt_by_type(self.db, type)
 
     def get_latest_prompt_by_type(self, type: PromptType) -> PromptModel:
-        return self.prompts_repo.get_latest_prompt_by_type(type)
+        return self.prompts_repo.get_latest_prompt_by_type(self.db, type)
 
     def create_prompt(self, prompt: PromptModel) -> PromptModel:
         return self.prompts_repo.create_prompt(prompt)

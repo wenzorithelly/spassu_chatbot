@@ -12,6 +12,8 @@ from app.entities.schema.chat_sessions_schema import (
 class ChatSessionsRepository(
     BaseRepository[ChatSessionModel, ChatSessionCreateSchema, ChatSessionUpdateSchema]
 ):
+    def __init__(self):
+        super().__init__(ChatSessionModel, ChatSessionSchema)
     def get_by_user_email(
         self, db: Session, user_email: str
     ) -> Optional[ChatSessionSchema]:
